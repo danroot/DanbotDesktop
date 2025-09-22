@@ -196,13 +196,81 @@ body, html {
 
 .recording-controls {
   display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background-color: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.ai-agents-section {
+  border-bottom: 1px solid #E5E7EB;
+  padding-bottom: 20px;
+}
+
+.ai-agents-section h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+
+.ai-agents-section p {
+  color: var(--text-light);
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.agents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.agent-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  padding: 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.agent-checkbox:hover {
+  background-color: #F9FAFB;
+}
+
+.agent-checkbox input[type="checkbox"] {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.agent-checkbox .agent-name {
+  font-weight: 600;
+  color: var(--text-dark);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.agent-checkbox .agent-description {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  line-height: 1.4;
+}
+
+.recording-buttons {
+  display: flex;
   gap: 16px;
 }
 
-.recording-controls button {
+.recording-buttons button {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   padding: 14px 24px;
   border: none;
   border-radius: 8px;
@@ -210,6 +278,30 @@ body, html {
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s;
+}
+
+.agents-count {
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.active-agents {
+  background-color: #EFF6FF;
+  border: 1px solid #DBEAFE;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.active-agents p {
+  color: var(--text-dark);
+  font-size: 0.875rem;
+  margin-bottom: 8px;
+}
+
+.active-agents p:last-child {
+  margin-bottom: 0;
 }
 
 .start-recording {
