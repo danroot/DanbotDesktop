@@ -8,9 +8,10 @@ dotenv.config({ path: process.resourcesPath + "/app/.env" });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-import { app, BrowserWindow, ipcMain, shell, dialog, Notification, Tray, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron';
 import path from 'node:path';
 import RecallAiSdk from '@recallai/desktop-sdk';
+import aiAgentService from './aiAgents.js';
 
 let mainWindow;
 let detectedMeeting = null;
@@ -19,6 +20,8 @@ let state = {
   recording: false,
   permissions_granted: false,
   meetings: [],
+  availableAgents: [],
+  selectedAgents: [],
 };
 
 function sendState() {
@@ -72,12 +75,27 @@ async function createDesktopSdkUpload() {
   return response.data;
 }
 
-async function startRecording(windowId) {
+async function startRecording(windowId, selectedAgents = []) {
   try {
     const { upload_token } = await createDesktopSdkUpload();
 
     if (!upload_token) {
       throw new Error("No upload token received from the server.");
+    }
+
+    // Initialize AI agents if any are selected and OpenAI key is available
+    if (selectedAgents.length > 0 && process.env.OPENAI_API_KEY) {
+      try {
+        await aiAgentService.initialize(process.env.OPENAI_API_KEY);
+        await aiAgentService.loadExistingContent();
+        state.selectedAgents = selectedAgents;
+        console.log('AI agents initialized:', selectedAgents);
+      } catch (error) {
+        console.error('Failed to initialize AI agents:', error);
+        // Continue with recording even if AI agents fail to initialize
+      }
+    } else {
+      state.selectedAgents = [];
     }
 
     RecallAiSdk.startRecording({
@@ -134,6 +152,16 @@ app.on('ready', () => {
     console.log("Permissions granted, ready to record");
     state.permissions_granted = true;
 
+    // Initialize available AI agents
+    try {
+      await aiAgentService.loadAgentConfigurations();
+      state.availableAgents = aiAgentService.getAvailableAgents();
+      console.log('Available AI agents:', state.availableAgents);
+    } catch (error) {
+      console.error('Error loading AI agent configurations:', error);
+      state.availableAgents = [];
+    }
+
     setInterval(sendState, 1000);
   });
 
@@ -143,6 +171,15 @@ app.on('ready', () => {
 
   RecallAiSdk.addEventListener('realtime-event', async (evt) => {
     console.log(evt);
+    
+    // Process transcript events with AI agents if any are selected
+    if (state.selectedAgents.length > 0 && evt.type === 'transcript' && evt.data?.transcript) {
+      try {
+        await aiAgentService.processTranscript(evt.data.transcript, state.selectedAgents);
+      } catch (error) {
+        console.error('Error processing transcript with AI agents:', error);
+      }
+    }
   });
 
   RecallAiSdk.addEventListener('media-capture-status', async (evt) => {
@@ -220,11 +257,11 @@ app.on('ready', () => {
 
     notif.on('action', async (_action, index) => {
       if (index === 0)
-        await startRecording(evt.window.id);
+        await startRecording(evt.window.id, []);
     });
 
     notif.on('click', async () => {
-      await startRecording(evt.window.id);
+      await startRecording(evt.window.id, []);
     });
 
     notif.show();
@@ -278,10 +315,13 @@ app.on('ready', () => {
           dialog.showMessageBoxSync(null, { message: "There is no meeting in progress." });
           break;
         }
-        await startRecording(detectedMeeting.window.id);
+        await startRecording(detectedMeeting.window.id, arg.selectedAgents || []);
         break;
       case 'stop-recording':
         RecallAiSdk.stopRecording({ windowId: detectedMeeting.window.id });
+        // Reset AI agents when recording stops
+        aiAgentService.reset();
+        state.selectedAgents = [];
         break;
     }
   });

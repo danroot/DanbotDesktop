@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "My Electron application description",
   "main": ".vite/build/main.js",
+  "type": "module",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
@@ -45,7 +46,9 @@
     "electron-prompt": "^1.7.0",
     "electron-squirrel-startup": "^1.0.1",
     "lucide-react": "^0.488.0",
+    "openai": "^4.71.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "yaml": "^2.6.1"
   }
 }

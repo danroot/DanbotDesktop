@@ -41,9 +41,12 @@ const App = () => {
     video_url: null,
     permissions_granted: false,
     meetings: [],
+    availableAgents: [],
+    selectedAgents: [],
   });
   const [canTryStart, setCanTryStart] = React.useState(true);
   const [selectedMeeting, setSelectedMeeting] = React.useState(null);
+  const [selectedAgents, setSelectedAgents] = React.useState([]);
 
   React.useEffect(() => {
     console.log("Setting up IPC listeners...");
@@ -68,6 +71,28 @@ const App = () => {
       command: "reupload",
       id: id,
     });
+  };
+
+  const handleAgentToggle = (agentName) => {
+    setSelectedAgents(prev => 
+      prev.includes(agentName)
+        ? prev.filter(name => name !== agentName)
+        : [...prev, agentName]
+    );
+  };
+
+  const handleStartRecording = () => {
+    electronAPI.send("message-from-renderer", {
+      command: "start-recording",
+      selectedAgents: selectedAgents
+    });
+
+    setCanTryStart(false);
+
+    setTimeout(function () {
+      if (!sdkState.recording)
+        setCanTryStart(true);
+    }, 5000);
   };
 
   // console.log(sdkState);
@@ -111,37 +136,59 @@ const App = () => {
           {
             sdkState.permissions_granted ?
               <div className="recording-controls">
-                <button
-                  className="start-recording"
-                  disabled={sdkState.recording || !canTryStart}
-                  onClick={() => {
-                    electronAPI.send("message-from-renderer", {
-                      command: "start-recording"
-                    });
+                {!sdkState.recording && sdkState.availableAgents.length > 0 && (
+                  <div className="ai-agents-section">
+                    <h3>AI Agents</h3>
+                    <p>Select AI agents to analyze the meeting transcript in real-time:</p>
+                    <div className="agents-list">
+                      {sdkState.availableAgents.map(agent => (
+                        <label key={agent.name} className="agent-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={selectedAgents.includes(agent.name)}
+                            onChange={() => handleAgentToggle(agent.name)}
+                            disabled={sdkState.recording}
+                          />
+                          <span className="agent-name">{agent.name}</span>
+                          <span className="agent-description">{agent.description}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="recording-buttons">
+                  <button
+                    className="start-recording"
+                    disabled={sdkState.recording || !canTryStart}
+                    onClick={handleStartRecording}
+                  >
+                    <Mic strokeWidth={2} size={20} />
+                    Start Recording
+                    {selectedAgents.length > 0 && (
+                      <span className="agents-count">with {selectedAgents.length} AI agent{selectedAgents.length !== 1 ? 's' : ''}</span>
+                    )}
+                  </button>
+                  <button
+                    className="stop-recording"
+                    disabled={!sdkState.recording}
+                    onClick={() => {
+                      electronAPI.send("message-from-renderer", {
+                        command: "stop-recording"
+                      });
+                    }}
+                  >
+                    <Pause strokeWidth={2} size={20} />
+                    Stop Recording
+                  </button>
+                </div>
 
-                    setCanTryStart(false);
-
-                    setTimeout(function () {
-                      if (!sdkState.recording)
-                        setCanTryStart(true);
-                    }, 5000);
-                  }}
-                >
-                  <Mic strokeWidth={2} size={20} />
-                  Start Recording
-                </button>
-                <button
-                  className="stop-recording"
-                  disabled={!sdkState.recording}
-                  onClick={() => {
-                    electronAPI.send("message-from-renderer", {
-                      command: "stop-recording"
-                    });
-                  }}
-                >
-                  <Pause strokeWidth={2} size={20} />
-                  Stop Recording
-                </button>
+                {sdkState.recording && selectedAgents.length > 0 && (
+                  <div className="active-agents">
+                    <p>Active AI agents: {selectedAgents.join(', ')}</p>
+                    <p>Check the project directory for generated Roles.md and UserStories.md files.</p>
+                  </div>
+                )}
               </div>
             :
             <div className="recording-controls">Permissions haven't been granted yet! Please do so in Settings.</div>
